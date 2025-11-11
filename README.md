@@ -1,4 +1,4 @@
-# [Название Проекта] - VR Puzzle Game
+# [Тут Название Проекта] - VR Puzzle Game
 
 Дизайн документ: https://docs.google.com/document/d/12dfUYWMPCigLa6zvwsQ2mDm_-GCDTVlDYfOsxL-14WE/edit?usp=sharing
 Разработка сценария: https://www.figma.com/board/RYROovfSNUTxywG3rYfAPn/%D0%A1%D1%8E%D0%B6%D0%B5%D1%82?node-id=0-1&p=f&t=tmmA38I6B4oa3VqO-0
