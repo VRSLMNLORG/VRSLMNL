@@ -4,7 +4,7 @@
 
 Разработка сценария: https://www.figma.com/board/RYROovfSNUTxywG3rYfAPn/%D0%A1%D1%8E%D0%B6%D0%B5%D1%82?node-id=0-1&p=f&t=tmmA38I6B4oa3VqO-0
 
-Прописанные механики: Mechanics.md
+Прописанные механики: [Mechanics.md](https://github.com/VRSLMNLORG/VRSLMNL/blob/f2cf76b17c7e52659e57b8ae9464180eb6e585a2/Mechanics.md)
 
 ## 🎮 О проекте
 
