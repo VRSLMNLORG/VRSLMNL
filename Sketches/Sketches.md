@@ -4,7 +4,7 @@ https://github.com/VRSLMNLORG/VRSLMNL/blob/f9ac365daa3c4acb52f6ca38b682fa7f74b00
 
 # Локация 1
 ## Детская комната
-https://github.com/VRSLMNLORG/VRSLMNL/blob/f9ac365daa3c4acb52f6ca38b682fa7f74b00900/Sketches/photo_2025-11-06_19-18-32.jpg
+Sketches/photo_2025-11-06_19-18-32.jpg
 
 ## Ванная
 
