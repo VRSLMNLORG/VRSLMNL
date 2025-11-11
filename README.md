@@ -9,6 +9,7 @@
 
 ## Рабочая архитектура проекта
 
+```
 Our_Assets/
 ├── Material/
 │   ├── Other_material/
@@ -19,3 +20,4 @@ Our_Assets/
 ├── Our_Scene/
 ├── Prefabs/
 └── Scripts/
+```
