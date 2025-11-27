@@ -19,6 +19,7 @@ public class CameraReticleSimple : MonoBehaviour
     public enum Visibility { Always, OnHover, WhileActionPressed }
     public enum RenderMode { Generated, CustomTexture }
     public enum HighlightMode { SwapMaterial, Emission }
+    public enum DisplayMode { ScreenSpace, VR3D }
 
     [Header("Detection")]
     [Tooltip("Max distance for the gaze ray")][Min(0.1f)] public float gazeMaxDistance = 20f;
@@ -35,12 +36,18 @@ public class CameraReticleSimple : MonoBehaviour
 
     [Header("Render")]
     public RenderMode renderMode = RenderMode.Generated;
+    [Tooltip("ScreenSpace = OnGUI (desktop), VR3D = 3D Quad in front of camera (VR)")]
+    public DisplayMode displayMode = DisplayMode.ScreenSpace;
+    [Tooltip("Distance from camera for VR3D mode (meters)")]
+    [Min(0.1f)] public float vrDistance = 2f;
+    [Tooltip("Size of reticle in VR3D mode (meters)")]
+    [Min(0.001f)] public float vrSize = 0.01f;
 
     [Header("Generated Ring")]
     [Min(8)] public int sizePx = 32;
     [Min(1)] public int thicknessPx = 3;
     [Min(0f)] public float featherPx = 1.5f;
-    public Color color = new Color(0.2f, 1f, 1f, 1f);
+    public Color color = new Color(0.6226415f, 0.6226415f, 0.6226415f);
 
     [Header("Custom Texture")]
     [Tooltip("Texture to draw at screen center when RenderMode = CustomTexture")] public Texture2D customTexture;
@@ -55,7 +62,7 @@ public class CameraReticleSimple : MonoBehaviour
     public bool highlightRequireHoverWhenSynced = true;
     public HighlightMode highlightMode = HighlightMode.SwapMaterial;
     [Tooltip("Used when HighlightMode = SwapMaterial")] public Material glowMaterial;
-    [Tooltip("Used when HighlightMode = Emission")] public Color emissionColor = new(0.9f, 0.9f, 0.2f);
+    [Tooltip("Used when HighlightMode = Emission")] public Color emissionColor = new(0.6226415f, 0.6226415f, 0.6226415f);
     [Tooltip("Used when HighlightMode = Emission")][Min(0f)] public float emissionIntensity = 1.5f;
 
     [Header("Behavior")]
@@ -74,6 +81,7 @@ public class CameraReticleSimple : MonoBehaviour
     // suppression flags
     float _suppressUntilUnscaled = 0f;
     bool _forceHideUntilRelease = false;
+    static readonly System.Collections.Generic.HashSet<ForcedPerspectiveFromPickup> s_suppressedPickups = new();
 
     // ring cache (Generated)
     Texture2D _ringTex;
@@ -85,6 +93,11 @@ public class CameraReticleSimple : MonoBehaviour
     // highlight cache
     readonly Dictionary<Renderer, Material[]> _originalMats = new();
     Renderer[] _currentRenderers = System.Array.Empty<Renderer>();
+
+    // VR 3D reticle
+    GameObject _vrReticleObject;
+    MeshRenderer _vrReticleRenderer;
+    Material _vrReticleMaterial;
 
     void OnEnable()
     {
@@ -102,6 +115,7 @@ public class CameraReticleSimple : MonoBehaviour
         ForcedPerspectiveFromPickup.HoldingStarted -= OnPickupStarted;
         ForcedPerspectiveFromPickup.HoldingEnded -= OnPickupEnded;
         DestroyRing();
+        DestroyVRReticle();
         ClearHighlight();
     }
 
@@ -135,6 +149,12 @@ public class CameraReticleSimple : MonoBehaviour
         {
             SetHighlight(false);
         }
+
+        // Update VR 3D reticle
+        if (displayMode == DisplayMode.VR3D)
+        {
+            UpdateVRReticle();
+        }
     }
 
     void UpdateHoverTarget()
@@ -142,7 +162,7 @@ public class CameraReticleSimple : MonoBehaviour
         GameObject newTarget = null;
         ForcedPerspectiveFromPickup newPickup = null;
 
-        // Объединяем маски для попадания по целям и препятствиям; учитываем триггеры
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ; пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         int mask = raycastMask | obstacleLayers;
         var hits = Physics.RaycastAll(_cam.transform.position, _cam.transform.forward, gazeMaxDistance, mask, QueryTriggerInteraction.Collide);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
@@ -152,7 +172,19 @@ public class CameraReticleSimple : MonoBehaviour
             var col = h.collider;
             if (col == null) continue;
 
-            // Если первым встречается препятствие — ничего не выделяем
+            // РЎРЅР°С‡Р°Р»Р° РїСЂРѕРІРµСЂСЏРµРј ForcedPerspective (РѕРЅ РјРѕР¶РµС‚ Р±С‹С‚СЊ РЅР° "Obstacle" СЃР»РѕРµ, РЅРѕ РјС‹ С…РѕС‚РёРј РёРјРµС‚СЊ РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РїСЂРѕРїСѓСЃС‚РёС‚СЊ РµРіРѕ)
+            var pickup = col.GetComponentInParent<ForcedPerspectiveFromPickup>();
+            if (pickup != null)
+            {
+                if (IsPickupSuppressed(pickup))
+                    continue; // РїСЂРѕРїСѓСЃРєР°РµРј Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРЅС‹Р№ РѕР±СЉРµРєС‚ Рё РїСЂРѕРґРѕР»Р¶Р°РµРј РёСЃРєР°С‚СЊ РґР°Р»СЊС€Рµ РїРѕ Р»СѓС‡Сѓ
+
+                newPickup = pickup;
+                newTarget = pickup.gameObject;
+                break;
+            }
+
+            // пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             if (IsObstacleCollider(col))
             {
                 newTarget = null;
@@ -160,16 +192,7 @@ public class CameraReticleSimple : MonoBehaviour
                 break;
             }
 
-            // Ищем Pickup за препятствиями не должен подсвечиваться
-            var pickup = col.GetComponentInParent<ForcedPerspectiveFromPickup>();
-            if (pickup != null)
-            {
-                newPickup = pickup;
-                newTarget = pickup.gameObject;
-                break;
-            }
-
-            // Если разрешено брать любой объект — берём первый попавшийся корень
+            // пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
             if (!requirePickupComponent)
             {
                 newTarget = col.transform.root.gameObject;
@@ -209,6 +232,8 @@ public class CameraReticleSimple : MonoBehaviour
 
     void OnGUI()
     {
+        // OnGUI only works in ScreenSpace mode
+        if (displayMode != DisplayMode.ScreenSpace) return;
         if (!enabledReticle) return;
         if (!IsReticleVisible()) return;
 
@@ -442,5 +467,146 @@ public class CameraReticleSimple : MonoBehaviour
             Destroy(_ringTex);
             _ringTex = null;
         }
+    }
+
+    // VR 3D Reticle
+    void EnsureVRReticle()
+    {
+        if (_vrReticleObject != null) return;
+        if (_cam == null) return;
+
+        // Create Quad GameObject
+        _vrReticleObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        _vrReticleObject.name = "VRReticle";
+        _vrReticleObject.transform.SetParent(_cam.transform, false);
+        _vrReticleObject.transform.localPosition = Vector3.forward * vrDistance;
+        _vrReticleObject.transform.localRotation = Quaternion.identity;
+        _vrReticleObject.transform.localScale = Vector3.one * vrSize;
+
+        // Remove collider (not needed for reticle)
+        var col = _vrReticleObject.GetComponent<Collider>();
+        if (col != null) Destroy(col);
+
+        // Get renderer
+        _vrReticleRenderer = _vrReticleObject.GetComponent<MeshRenderer>();
+        if (_vrReticleRenderer == null) return;
+
+        // Create material with standard shader (works in all Unity versions)
+        Shader shader = Shader.Find("Unlit/Transparent");
+        if (shader == null) shader = Shader.Find("Sprites/Default"); // Fallback
+        if (shader == null) shader = Shader.Find("Standard"); // Last resort
+        
+        _vrReticleMaterial = new Material(shader);
+        
+        // Configure for transparency if using Unlit/Transparent
+        if (shader.name.Contains("Transparent") || shader.name.Contains("Unlit"))
+        {
+            _vrReticleMaterial.SetFloat("_Mode", 3); // Transparent mode
+            _vrReticleMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            _vrReticleMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            _vrReticleMaterial.SetInt("_ZWrite", 0);
+            _vrReticleMaterial.DisableKeyword("_ALPHATEST_ON");
+            _vrReticleMaterial.EnableKeyword("_ALPHABLEND_ON");
+            _vrReticleMaterial.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            _vrReticleMaterial.renderQueue = 3000;
+        }
+
+        _vrReticleRenderer.material = _vrReticleMaterial;
+        _vrReticleRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        _vrReticleRenderer.receiveShadows = false;
+
+        // Set layer to UI or a layer that doesn't interact with physics
+        _vrReticleObject.layer = LayerMask.NameToLayer("UI");
+        if (_vrReticleObject.layer == -1) _vrReticleObject.layer = 5; // Default UI layer
+    }
+
+    void UpdateVRReticle()
+    {
+        if (!enabledReticle)
+        {
+            if (_vrReticleObject != null) _vrReticleObject.SetActive(false);
+            return;
+        }
+
+        bool shouldShow = IsReticleVisible();
+        if (!shouldShow)
+        {
+            if (_vrReticleObject != null) _vrReticleObject.SetActive(false);
+            return;
+        }
+
+        EnsureVRReticle();
+        if (_vrReticleObject == null || _vrReticleRenderer == null || _vrReticleMaterial == null) return;
+
+        _vrReticleObject.SetActive(true);
+
+        // Update position and scale
+        if (_cam != null)
+        {
+            _vrReticleObject.transform.localPosition = Vector3.forward * vrDistance;
+            _vrReticleObject.transform.localScale = Vector3.one * vrSize;
+        }
+
+        // Update texture
+        Texture2D tex = null;
+        Color tint = Color.white;
+
+        if (renderMode == RenderMode.CustomTexture)
+        {
+            tex = customTexture;
+            tint = customTextureTint;
+        }
+        else // Generated
+        {
+            int drawThickness = Mathf.Max(1, thicknessPx);
+            EnsureRingTexture(drawThickness);
+            tex = _ringTex;
+            tint = color;
+        }
+
+        if (tex == null) return;
+
+        // Apply texture to material
+        _vrReticleMaterial.mainTexture = tex;
+
+        // Calculate alpha
+        float a = tint.a;
+        if (visibility == Visibility.WhileActionPressed && showRingWithoutTarget && _currentTarget == null)
+            a *= Mathf.Clamp01(noTargetAlpha);
+
+        // Update color with alpha
+        _vrReticleMaterial.color = new Color(tint.r, tint.g, tint.b, a);
+    }
+
+    void DestroyVRReticle()
+    {
+        if (_vrReticleObject != null)
+        {
+            Destroy(_vrReticleObject);
+            _vrReticleObject = null;
+        }
+        if (_vrReticleMaterial != null)
+        {
+            Destroy(_vrReticleMaterial);
+            _vrReticleMaterial = null;
+        }
+        _vrReticleRenderer = null;
+    }
+
+    internal static void SuppressPickup(ForcedPerspectiveFromPickup pickup)
+    {
+        if (pickup == null) return;
+        s_suppressedPickups.Add(pickup);
+    }
+
+    internal static void UnsuppressPickup(ForcedPerspectiveFromPickup pickup)
+    {
+        if (pickup == null) return;
+        s_suppressedPickups.Remove(pickup);
+    }
+
+    internal static bool IsPickupSuppressed(ForcedPerspectiveFromPickup pickup)
+    {
+        return pickup != null && s_suppressedPickups.Contains(pickup);
     }
 }

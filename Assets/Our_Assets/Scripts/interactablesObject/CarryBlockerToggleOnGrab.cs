@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
@@ -11,10 +12,16 @@ using UnityEngine.XR.Interaction.Toolkit;
 /// - Listens to ForcedPerspectiveFromPickup global events to know when any scalable object is being held.
 /// - Optionally also monitors XR Interactor selections as an additional holding signal.
 /// - Exposes SetDoorOpen(bool) so doors can notify their open/closed state without duplicating logic.
+/// - Prevents objects from slipping through when thrown by delaying state change after release.
+/// - Provides bounce functionality even when blocker is a trigger, using OnTriggerEnter for physics.
 ///
 /// Solid rules:
 ///   solid = (solidWhenDoorClosed && !doorOpen) || (solidWhileHolding && anyHolding)
 ///   isTrigger = !solid
+///
+/// Bounce behavior:
+///   When enableBounceWhenTrigger is true and blocker is a trigger, objects with Rigidbody
+///   will bounce off the blocker on contact, preventing them from passing through.
 ///
 /// Attach this component to the CarryBlocker object in the doorway.
 /// Doors should call SetDoorOpen(IsOpen) when they finish opening/closing.
@@ -48,11 +55,24 @@ public class CarryBlockerToggleOnGrab : MonoBehaviour
     [Tooltip("Interactors to monitor. If empty and alsoUseXRInteractorSelections is true, auto-discovers all XRBaseInteractors in the scene (active and inactive).")]
     [SerializeField] private List<UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor> interactors = new List<UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor>();
 
+    [Header("Throw Protection")]
+    [Tooltip("Delay in seconds before switching to trigger after object is released. Prevents objects from slipping through when thrown.")]
+    [SerializeField, Min(0f)] private float delayAfterRelease = 0.5f;
+
+    [Header("Bounce Settings")]
+    [Tooltip("Make objects bounce off the blocker even when it's a trigger. Works via OnTriggerEnter.")]
+    [SerializeField] private bool enableBounceWhenTrigger = true;
+    [Tooltip("Bounce force multiplier when object hits the blocker (only applies when enableBounceWhenTrigger is true).")]
+    [SerializeField, Range(0f, 2f)] private float bounceForce = 1.2f;
+    [Tooltip("Layers that should bounce off the blocker. If empty, all Rigidbody objects will bounce.")]
+    [SerializeField] private LayerMask bounceLayers = -1;
+
     // State
     private bool doorOpen = false;
     private int heldCountFP = 0;             // ForcedPerspectiveFromPickup holding count
     private int activeSelections = 0;        // XR Interactor selections
     private bool originalIsTrigger = true;   // for restoration when disabled (optional)
+    private Coroutine delayedStateChangeCoroutine = null;
 
     public void SetDoorOpen(bool isOpen)
     {
@@ -102,6 +122,13 @@ public class CarryBlockerToggleOnGrab : MonoBehaviour
         if (alsoUseXRInteractorSelections)
         {
             SubscribeInteractors(false);
+        }
+
+        // Останавливаем корутину задержки, если она запущена
+        if (delayedStateChangeCoroutine != null)
+        {
+            StopCoroutine(delayedStateChangeCoroutine);
+            delayedStateChangeCoroutine = null;
         }
 
         // Restore original if desired
@@ -167,7 +194,8 @@ public class CarryBlockerToggleOnGrab : MonoBehaviour
             interactors = new List<UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor>();
         if (interactors.Count == 0)
         {
-            var found = FindObjectsOfType<UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor>(includeInactive: true);
+            var found = FindObjectsByType<UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var it in found)
                 if (it != null && !interactors.Contains(it))
                     interactors.Add(it);
@@ -211,7 +239,20 @@ public class CarryBlockerToggleOnGrab : MonoBehaviour
     private void OnSelectExited(SelectExitEventArgs args)
     {
         activeSelections = Mathf.Max(0, activeSelections - 1);
-        ApplyState();
+
+        // Если задержка включена и больше нет удерживаемых объектов, применяем задержку
+        if (delayAfterRelease > 0f && activeSelections == 0 && (!useForcedPerspectiveEvents || heldCountFP == 0))
+        {
+            if (delayedStateChangeCoroutine != null)
+            {
+                StopCoroutine(delayedStateChangeCoroutine);
+            }
+            delayedStateChangeCoroutine = StartCoroutine(DelayedStateChangeCoroutine());
+        }
+        else
+        {
+            ApplyState();
+        }
     }
 
     private void OnHoldingStartedFP(ForcedPerspectiveFromPickup _)
@@ -223,7 +264,72 @@ public class CarryBlockerToggleOnGrab : MonoBehaviour
     private void OnHoldingEndedFP(ForcedPerspectiveFromPickup _)
     {
         heldCountFP = Mathf.Max(0, heldCountFP - 1);
+
+        // Если задержка включена и больше нет удерживаемых объектов, применяем задержку
+        if (delayAfterRelease > 0f && heldCountFP == 0 && (!alsoUseXRInteractorSelections || activeSelections == 0))
+        {
+            // Отменяем предыдущую корутину задержки, если она существует
+            if (delayedStateChangeCoroutine != null)
+            {
+                StopCoroutine(delayedStateChangeCoroutine);
+            }
+            delayedStateChangeCoroutine = StartCoroutine(DelayedStateChangeCoroutine());
+        }
+        else
+        {
+            ApplyState();
+        }
+    }
+
+    private System.Collections.IEnumerator DelayedStateChangeCoroutine()
+    {
+        yield return new WaitForSeconds(delayAfterRelease);
         ApplyState();
+        delayedStateChangeCoroutine = null;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        // Отскок работает только когда коллайдер является триггером и включена опция отскока
+        if (!enableBounceWhenTrigger || !carryBlocker.isTrigger)
+            return;
+
+        // Проверяем, должен ли этот объект отскакивать
+        if (bounceLayers != -1)
+        {
+            int layerBit = 1 << other.gameObject.layer;
+            if ((bounceLayers.value & layerBit) == 0)
+                return;
+        }
+
+        // Получаем Rigidbody объекта
+        Rigidbody rb = other.attachedRigidbody;
+        if (rb == null || rb.isKinematic)
+            return;
+
+        // Вычисляем направление отскока от центра блокера к объекту
+        Vector3 blockerCenter = carryBlocker.bounds.center;
+        Vector3 objectPosition = other.bounds.center;
+        Vector3 direction = (objectPosition - blockerCenter).normalized;
+
+        // Если направление слишком близко к нулю, используем обратное направление скорости
+        if (direction.sqrMagnitude < 0.01f)
+        {
+            direction = -rb.linearVelocity.normalized;
+            if (direction.sqrMagnitude < 0.01f)
+                direction = Vector3.up; // Fallback
+        }
+
+        // Получаем текущую скорость и применяем отскок
+        Vector3 velocity = rb.linearVelocity;
+        float speed = velocity.magnitude;
+
+        // Отражаем скорость по нормали
+        Vector3 normal = direction.normalized;
+        Vector3 reflectedVelocity = Vector3.Reflect(velocity.normalized, -normal) * speed * bounceForce;
+
+        // Применяем отскок, сохраняя вертикальную компоненту гравитации
+        rb.linearVelocity = new Vector3(reflectedVelocity.x, Mathf.Max(reflectedVelocity.y, velocity.y * 0.5f), reflectedVelocity.z);
     }
 
     private void ApplyState()

@@ -61,9 +61,15 @@ public partial class ForcedPerspectiveFromPickup
     private void UpdateScale()
     {
         float newScale = (_cameraTransform.position - transform.position).magnitude / _orgDistanceToScaleRatio;
-        if (Mathf.Abs(newScale - transform.localScale.x) < 0.0001f) return;
+        float currentScale = transform.localScale.x;
+        if (Mathf.Abs(newScale - currentScale) < 0.0001f)
+        {
+            ApplyMassScaling(currentScale);
+            return;
+        }
 
         transform.localScale = Vector3.one * newScale;
+        ApplyMassScaling(newScale);
         // При масштабировании сохраняем экранное положение
         if (Camera.main != null)
         {

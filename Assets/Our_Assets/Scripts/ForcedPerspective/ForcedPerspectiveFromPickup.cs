@@ -54,6 +54,7 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
     internal static int s_gazeFrame = -1;                 // frame index of cached gaze raycast
     internal static Collider s_cachedTopHit = null;        // top-most collider seen by camera this frame
     internal static ForcedPerspectiveFromPickup s_current; // current exclusive holder
+    internal bool blockedByTeleport { get; set; }
 
     [Header("Orientation")]
     [SerializeField] private bool keepUpright = true;
@@ -70,6 +71,13 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
     private BoxCollider _proxyCollider;
     private Vector3 _proxySize;
     private Vector3 _originalLocalScale;
+
+    [Header("Mass Scaling")]
+    [SerializeField, Tooltip("Синхронизировать массу с текущим масштабом")] private bool scaleMassWithSize = true;
+    [SerializeField, Tooltip("Показатель степени для связи массы с масштабом (1 = линейно, 3 = как объём)"), Min(0f)]
+    private float massScaleExponent = 3f;
+    [SerializeField, Tooltip("Вернуть массу к исходной при отпускании")] private bool resetMassOnRelease = true;
+    private float _preHoldMass = 1f;
 
     [Header("Proxy Settings")]
     [SerializeField, Min(0f)] private float proxyPadding = 0.02f; // относительный запас к размерам прокси
@@ -98,9 +106,6 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
     // Сетка в локальном пространстве камеры
     private readonly List<Vector3> _shapedGrid = new List<Vector3>();
 
-    // Плавная отцентровка
-    private bool _centeringActive = false;
-
     // Служебное
     bool _isUnderGaze;
     bool _bothPressedPrevFrame; // edge detection for simultaneous two-hand press
@@ -112,6 +117,7 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
         if (_rb == null) _rb = gameObject.AddComponent<Rigidbody>();
         _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         _selfColliders = GetComponentsInChildren<Collider>(true);
+        if (_rb != null) _preHoldMass = Mathf.Max(0.0001f, _rb.mass);
     }
 
     void OnEnable()
@@ -139,7 +145,7 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
 
     public void StartHolding()
     {
-        if (isHeld) return;
+        if (isHeld || blockedByTeleport) return;
         CacheCamera();
         if (_cameraTransform == null) return;
 
@@ -156,6 +162,7 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
 
         _originalParent = transform.parent;
         isHeld = true;
+        if (_rb != null) _preHoldMass = Mathf.Max(0.0001f, _rb.mass);
 
         // Notify listeners
         try { HoldingStarted?.Invoke(this); } catch { }
@@ -191,6 +198,7 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
         transform.SetParent(_cameraTransform, true);
 
         _originalLocalScale = transform.localScale;
+        ApplyMassScaling(_originalLocalScale.x);
 
         // --- Создание/обновление ProxyCollider на основе КОМПОЗИТНЫХ ЛОКАЛЬНЫХ границ (не мировых AABB) ---
         Bounds compositeLocal = CalculateCompositeLocalBounds(transform);
@@ -244,7 +252,6 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
     {
         if (!isHeld) return;
         isHeld = false;
-        _centeringActive = false;
         if (s_current == this) s_current = null; // снять глобальную блокировку
 
         // Notify listeners
@@ -254,6 +261,8 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
 
         if (_rb != null)
         {
+            if (resetMassOnRelease)
+                _rb.mass = _preHoldMass;
             _rb.constraints = RigidbodyConstraints.None;
             _rb.isKinematic = false;
             _rb.useGravity = true;
@@ -289,7 +298,6 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
 
     private IEnumerator CenterViewportCoroutine()
     {
-        _centeringActive = true;
 
         Vector2 startViewport = new Vector2(_orgViewportPos.x, _orgViewportPos.y);
         float t = 0f;
@@ -299,7 +307,6 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
         {
             // Мгновенно
             _orgViewportPos = targetViewportOnPickup;
-            _centeringActive = false;
             yield break;
         }
 
@@ -316,7 +323,6 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
 
         // Финальная фиксация
         _orgViewportPos = targetViewportOnPickup;
-        _centeringActive = false;
     }
 
     // Public debug accessors
@@ -390,5 +396,15 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
         if (c == null) return false;
         int layerBit = 1 << c.gameObject.layer;
         return (_wallLayers.value & layerBit) != 0;
+    }
+
+    private void ApplyMassScaling(float currentUniformScale)
+    {
+        if (!scaleMassWithSize || _rb == null) return;
+        float baseScale = Mathf.Max(1e-5f, (_originalLocalScale == Vector3.zero ? currentUniformScale : _originalLocalScale.x));
+        float factor = Mathf.Max(0f, currentUniformScale) / baseScale;
+        float exponent = Mathf.Max(0f, massScaleExponent);
+        float scaledMass = _preHoldMass * Mathf.Pow(factor, exponent);
+        _rb.mass = Mathf.Max(0.0001f, scaledMass);
     }
 }

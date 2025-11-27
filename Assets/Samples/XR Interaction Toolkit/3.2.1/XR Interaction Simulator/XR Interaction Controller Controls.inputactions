@@ -1,4 +1,5 @@
 {
+    "version": 1,
     "name": "XR Interaction Controller Controls",
     "maps": [
         {
@@ -33,7 +34,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Trigger",
+                    "name": "RightTrigger",
                     "type": "Button",
                     "id": "3808b2c1-2f77-4a89-bc2a-34c0e0ef0ad3",
                     "expectedControlType": "",
@@ -117,6 +118,15 @@
                     "name": "Secondary Touch",
                     "type": "Button",
                     "id": "613de0bf-5bc1-4b53-a4b8-0ae20fb87272",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "LeftTriigger",
+                    "type": "Button",
+                    "id": "526ae8ca-fc05-4c3e-ac54-cd69d7b31e08",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -307,7 +317,18 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Trigger",
+                    "action": "RightTrigger",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "16558d6a-6ffa-4e9c-9061-eadf4dc297b2",
+                    "path": "<XRController>{RightHand}/{TriggerButton}",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "RightTrigger",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -407,6 +428,28 @@
                     "processors": "",
                     "groups": "",
                     "action": "Secondary Touch",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "d8b03c22-d3ad-49e3-9ee5-90144aa76b30",
+                    "path": "<Keyboard>/t",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "LeftTriigger",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "85102e45-71f6-4a3e-9a84-dc1e99effcf3",
+                    "path": "<XRController>{LeftHand}/{TriggerButton}",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "LeftTriigger",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
