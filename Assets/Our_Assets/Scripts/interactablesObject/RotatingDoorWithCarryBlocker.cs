@@ -148,6 +148,7 @@ public class RotatingDoorWithCarryBlocker : MonoBehaviour
         if (IsOpen) return;
         IsOpen = true;
         StartMove(true);
+        Debug.Log("Дверь открывается");
         if (autoCloseDelay > 0f)
             StartCoroutine(AutoCloseAfter(autoCloseDelay));
     }

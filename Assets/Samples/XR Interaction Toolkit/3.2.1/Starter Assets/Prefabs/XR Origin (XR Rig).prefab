@@ -417,6 +417,7 @@ GameObject:
   - component: {fileID: 1767192437}
   - component: {fileID: 6232745470614056083}
   - component: {fileID: 7332194844630813610}
+  - component: {fileID: 4908097278552634918}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -635,7 +636,6 @@ MonoBehaviour:
   m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
   m_RequiresDepthTexture: 0
   m_RequiresColorTexture: 0
-  m_Version: 2
   m_TaaSettings:
     m_Quality: 3
     m_FrameInfluence: 0.1
@@ -643,6 +643,53 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
+--- !u!114 &4908097278552634918
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1767192433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 703d8c61061d7284eb39b04dc6d02754, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraReticleSimple
+  gazeMaxDistance: 100
+  raycastMask:
+    serializedVersion: 2
+    m_Bits: 64
+  requirePickupComponent: 1
+  obstacleLayers:
+    serializedVersion: 2
+    m_Bits: 8
+  holdActionLeft: {fileID: -3051824795118760265, guid: b6d5c44ebe3244b7692e81ae8265eb22, type: 3}
+  holdActionRight: {fileID: -2439264783773714294, guid: b6d5c44ebe3244b7692e81ae8265eb22, type: 3}
+  renderMode: 1
+  displayMode: 1
+  vrDistance: 2
+  vrSize: 0.08
+  sizePx: 32
+  thicknessPx: 3
+  featherPx: 1.5
+  color: {r: 0.62352943, g: 0.62352943, b: 0.62352943, a: 1}
+  customTexture: {fileID: 2800000, guid: f9cb67e576d274c29bfa90e7bd16ba32, type: 3}
+  customTextureTint: {r: 0.6226415, g: 0.6226415, b: 0.6226415, a: 1}
+  customTextureSizePx: 48
+  enableHighlight: 1
+  syncHighlightToReticle: 1
+  highlightRequireHoverWhenSynced: 1
+  highlightMode: 1
+  glowMaterial: {fileID: 0}
+  emissionColor: {r: 0.2924528, g: 0.2924528, b: 0.2924528, a: 1}
+  emissionIntensity: 1.01
+  enabledReticle: 1
+  visibility: 2
+  showRingWithoutTarget: 1
+  noTargetAlpha: 0.5
+  suppressOnPickup: 1
+  pickupSuppressSeconds: 0.25
 --- !u!1 &58445280694286476
 GameObject:
   m_ObjectHideFlags: 0
@@ -659,7 +706,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &7635210561634702159
 Transform:
   m_ObjectHideFlags: 0
@@ -682,7 +729,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 58445280694286476}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9b1e8c997df241c1a67045eeac79b41b, type: 3}
   m_Name: 
@@ -767,7 +814,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1316853283282549446}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9b46d3c2f9f9a9849840e47b9ddef1b2, type: 3}
   m_Name: 
@@ -838,7 +885,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Mediator: {fileID: 6640002710935096923}
   m_TransformationPriority: 0
-  m_TurnAmount: 45
+  m_TurnAmount: 35
   m_DebounceTime: 0.5
   m_EnableTurnLeftRight: 1
   m_EnableTurnAround: 1
@@ -930,6 +977,7 @@ GameObject:
   - component: {fileID: 6520291404937146767}
   - component: {fileID: 5826056641483426609}
   - component: {fileID: 5033801203051696737}
+  - component: {fileID: 3952345782602632551}
   m_Layer: 2
   m_Name: XR Origin (XR Rig)
   m_TagString: Untagged
@@ -1066,6 +1114,24 @@ MonoBehaviour:
   m_AimAssistRequiredSpeed: 0.25
   m_AimAssistPercent: 0.8
   m_AimAssistMaxSpeedPercent: 10
+--- !u!114 &3952345782602632551
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1717954561962503725}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: caf0ba8905b647c4d80e347b729d0b16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::XROriginGroundWatcher
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 64
+  upOffset: 0.05
+  downDistance: 2
+  debugLogChanges: 1
 --- !u!1 &1787516059220952802
 GameObject:
   m_ObjectHideFlags: 0
@@ -1160,7 +1226,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &8418786636219059989
 Transform:
   m_ObjectHideFlags: 0
@@ -1480,7 +1546,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3904471525139099824}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e3cd49dc1a38aff4fa00676ddd64cf4e, type: 3}
   m_Name: 
@@ -1937,7 +2003,11 @@ PrefabInstance:
       objectReference: {fileID: 8718302446126152263}
     - target: {fileID: 2761784063978902503, guid: c1800acf6366418a9b5f610249000331, type: 3}
       propertyPath: m_RaycastMask.m_Bits
-      value: 2147483681
+      value: 2147484136
+      objectReference: {fileID: 0}
+    - target: {fileID: 2761784063978902503, guid: c1800acf6366418a9b5f610249000331, type: 3}
+      propertyPath: m_InteractionLayers.m_Bits
+      value: 2147483650
       objectReference: {fileID: 0}
     - target: {fileID: 2761784063978902503, guid: c1800acf6366418a9b5f610249000331, type: 3}
       propertyPath: m_SelectInput.m_InputActionReferenceValue
@@ -2186,6 +2256,10 @@ PrefabInstance:
       propertyPath: m_RayOriginTransform
       value: 
       objectReference: {fileID: 716906830792148215}
+    - target: {fileID: 2761784063978902503, guid: c1800acf6366418a9b5f610249000331, type: 3}
+      propertyPath: m_RaycastMask.m_Bits
+      value: 2147483880
+      objectReference: {fileID: 0}
     - target: {fileID: 2761784063978902503, guid: c1800acf6366418a9b5f610249000331, type: 3}
       propertyPath: m_SelectInput.m_InputActionReferenceValue
       value: 
@@ -2469,6 +2543,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4808866746549998793, guid: b200f6587d118224eba8467281481800, type: 3}
+      propertyPath: m_InteractionLayers.m_Bits
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8229381180640938747, guid: b200f6587d118224eba8467281481800, type: 3}
+      propertyPath: m_RaycastMask.m_Bits
+      value: 2147483745
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2498,6 +2580,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 202364688}
     m_Modifications:
+    - target: {fileID: 1255647619390271626, guid: 3df3e1220f2164f448701a6de8084f92, type: 3}
+      propertyPath: m_RaycastMask.m_Bits
+      value: 2147483745
+      objectReference: {fileID: 0}
+    - target: {fileID: 2442306273320644280, guid: 3df3e1220f2164f448701a6de8084f92, type: 3}
+      propertyPath: m_InteractionLayers.m_Bits
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 4804964734930210078, guid: 3df3e1220f2164f448701a6de8084f92, type: 3}
       propertyPath: m_Name
       value: Near-Far Interactor
