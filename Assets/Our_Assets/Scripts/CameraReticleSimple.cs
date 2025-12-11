@@ -495,9 +495,9 @@ public class CameraReticleSimple : MonoBehaviour
         Shader shader = Shader.Find("Unlit/Transparent");
         if (shader == null) shader = Shader.Find("Sprites/Default"); // Fallback
         if (shader == null) shader = Shader.Find("Standard"); // Last resort
-        
+
         _vrReticleMaterial = new Material(shader);
-        
+
         // Configure for transparency if using Unlit/Transparent
         if (shader.name.Contains("Transparent") || shader.name.Contains("Unlit"))
         {

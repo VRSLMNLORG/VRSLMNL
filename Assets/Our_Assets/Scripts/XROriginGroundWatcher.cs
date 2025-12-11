@@ -1,37 +1,62 @@
 using UnityEngine;
 
 /// <summary>
-/// Tracks which ForcedPerspectiveFromPickup (if any) is directly underneath the XR Origin.
-/// Raycasts downward each frame and exposes the current target via event + property.
+/// Tracks the nearest ForcedPerspectiveFromPickup under the XR Origin using OverlapSphere.
+/// Place on XR Origin; it checks a sphere below with layer/tag filters and raises an event on change.
 /// </summary>
 [DisallowMultipleComponent]
 public class XROriginGroundWatcher : MonoBehaviour
 {
-    [Header("Ground Check")]
-    [Tooltip("Physics layers considered when raycasting downward from the XR Origin.")]
+    [Header("Overlap Settings")]
+    [Tooltip("Physics layers considered as ground candidates.")]
     public LayerMask groundMask = ~0;
 
-    [Tooltip("Vertical offset applied upward before casting downward (to start ray from inside rig).")]
+    [Tooltip("Optional tag filter. Leave empty to ignore tags.")]
+    public string requiredTag = "";
+
+    [Tooltip("Vertical offset applied upward before sampling the overlap center.")]
     [Min(0f)] public float upOffset = 0.05f;
 
-    [Tooltip("Ray length when checking below the rig (meters).")]
-    [Min(0.05f)] public float downDistance = 1.5f;
+    [Tooltip("Vertical drop from the origin to place the overlap center (meters).")]
+    [Min(0f)] public float downOffset = 0.1f;
+
+    [Tooltip("Radius of the overlap sphere.")]
+    [Min(0.05f)] public float radius = 0.5f;
 
     [Header("Debug")]
-    [Tooltip("If enabled, logs when the ground target changes.")]
     public bool debugLogChanges = false;
 
     public ForcedPerspectiveFromPickup CurrentTarget { get; private set; }
-
     public event System.Action<ForcedPerspectiveFromPickup> GroundTargetChanged;
+
+    readonly Collider[] _hits = new Collider[16];
 
     void Update()
     {
         ForcedPerspectiveFromPickup newTarget = null;
-        Vector3 origin = transform.position + Vector3.up * upOffset;
 
-        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, downDistance, groundMask, QueryTriggerInteraction.Ignore))
-            newTarget = hit.collider != null ? hit.collider.GetComponentInParent<ForcedPerspectiveFromPickup>() : null;
+        Vector3 center = transform.position + Vector3.up * upOffset - Vector3.up * downOffset;
+        int count = Physics.OverlapSphereNonAlloc(center, radius, _hits, groundMask, QueryTriggerInteraction.Ignore);
+
+        float bestDistSqr = float.MaxValue;
+        for (int i = 0; i < count; i++)
+        {
+            var col = _hits[i];
+            if (col == null) continue;
+
+            if (!string.IsNullOrEmpty(requiredTag) && !col.CompareTag(requiredTag))
+                continue;
+
+            var candidate = col.GetComponentInParent<ForcedPerspectiveFromPickup>();
+            if (candidate == null) continue;
+
+            float d = (candidate.transform.position - center).sqrMagnitude;
+            if (d < bestDistSqr)
+            {
+                bestDistSqr = d;
+                newTarget = candidate;
+            }
+        }
 
         if (CurrentTarget == newTarget)
             return;
@@ -40,7 +65,7 @@ public class XROriginGroundWatcher : MonoBehaviour
         if (debugLogChanges)
         {
             string name = CurrentTarget != null ? CurrentTarget.name : "<none>";
-            Debug.Log($"[XROriginGroundWatcher] ground target -> {name}", this);
+            Debug.Log($"[XROriginGroundOverlapWatcher] ground target -> {name}", this);
         }
         GroundTargetChanged?.Invoke(CurrentTarget);
     }
