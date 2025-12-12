@@ -2,6 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 /// <summary>
 /// Forced‑Perspective удержание объекта с «силуэтной сеткой» и управлением через Input System.
@@ -23,6 +26,8 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private Transform _cameraTransform; // если не задано, берётся Camera.main
+    [Tooltip("XR Grab Interactable компонент (автоматически находится, если не задан). При активации ForcedPerspective объект автоматически освобождается от захвата.")]
+    [SerializeField] private XRGrabInteractable _xrGrabInteractable;
 
     [Header("Gaze Control (Input System)")]
     [Tooltip("Действие удержания (левая рука)")]
@@ -118,6 +123,10 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
         _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         _selfColliders = GetComponentsInChildren<Collider>(true);
         if (_rb != null) _preHoldMass = Mathf.Max(0.0001f, _rb.mass);
+
+        // Автоматически находим XRGrabInteractable, если не задан
+        if (_xrGrabInteractable == null)
+            _xrGrabInteractable = GetComponent<XRGrabInteractable>();
     }
 
     void OnEnable()
@@ -154,6 +163,9 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
 
         if (s_current != null && s_current != this) return; // эксклюзивная блокировка
         s_current = this;
+
+        // Автоматически освобождаем объект от XR Grab Interactable, если он захвачен
+        ReleaseFromXRGrab();
 
         // Проверка равномерности масштаба
         float s = transform.localScale.x;
@@ -406,5 +418,34 @@ public partial class ForcedPerspectiveFromPickup : MonoBehaviour
         float exponent = Mathf.Max(0f, massScaleExponent);
         float scaledMass = _preHoldMass * Mathf.Pow(factor, exponent);
         _rb.mass = Mathf.Max(0.0001f, scaledMass);
+    }
+
+    /// <summary>
+    /// Освобождает объект от XR Grab Interactable, если он в данный момент захвачен.
+    /// Вызывается автоматически при активации ForcedPerspective.
+    /// </summary>
+    private void ReleaseFromXRGrab()
+    {
+        if (_xrGrabInteractable == null) return;
+
+        // Проверяем, захвачен ли объект
+        if (!_xrGrabInteractable.isSelected) return;
+
+        // Получаем interactionManager для корректного завершения взаимодействия
+        var interactionManager = _xrGrabInteractable.interactionManager;
+        if (interactionManager == null) return;
+
+        // Получаем все interactors, которые захватили объект (копируем в список, так как коллекция может измениться)
+        var interactors = new List<IXRSelectInteractor>(_xrGrabInteractable.interactorsSelecting);
+
+        // Освобождаем от каждого interactor
+        foreach (var interactor in interactors)
+        {
+            if (interactor != null)
+            {
+                // Используем interactionManager для корректного завершения взаимодействия
+                interactionManager.SelectExit(interactor, _xrGrabInteractable);
+            }
+        }
     }
 }
