@@ -1581,6 +1581,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3952345782602632551, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      propertyPath: blockedLayer
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 3952345782602632551, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      propertyPath: blockedLayerName
+      value: Blocked layer
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
