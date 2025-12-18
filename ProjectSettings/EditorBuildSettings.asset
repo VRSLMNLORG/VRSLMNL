@@ -14,6 +14,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Our_Assets/Our_Scene/Room 1.unity
     guid: caf38ca85e8bb89498fcf6310e8c01e7
+  - enabled: 1
+    path: Assets/Our_Assets/Our_Scene/Room 2.unity
+    guid: f308f895ec2bd4347b34e8f3d7f4b03e
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: bfa1182bd221b4ca89619141f66f1260, type: 2}
     Unity.XR.WindowsMR.Settings: {fileID: 11400000, guid: dc5a169419fa04987b057f65238cf3ba, type: 2}
