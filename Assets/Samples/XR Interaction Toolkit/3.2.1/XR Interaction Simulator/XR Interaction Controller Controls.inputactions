@@ -43,6 +43,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "RightTriggerComputer",
+                    "type": "Button",
+                    "id": "8274410d-13a0-4963-bbd2-086d0218af31",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Primary Button",
                     "type": "Button",
                     "id": "54068f2e-4569-46ab-9864-63b23fb9c26a",
@@ -127,6 +136,15 @@
                     "name": "LeftTriigger",
                     "type": "Button",
                     "id": "526ae8ca-fc05-4c3e-ac54-cd69d7b31e08",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "LeftTriiggerComputer",
+                    "type": "Button",
+                    "id": "61f9a811-8e50-4bcb-8392-dcde14fd5e68",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -334,6 +352,17 @@
                 },
                 {
                     "name": "",
+                    "id": "22fefdb7-0e91-4f0b-a444-df3ed3067818",
+                    "path": "<Keyboard>/t",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "RightTriggerComputer",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "c17eb846-7a66-4006-9d57-6b91831868d0",
                     "path": "<Keyboard>/1",
                     "interactions": "",
@@ -450,6 +479,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "LeftTriigger",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a6deb613-51a7-4296-9938-a48916ef8736",
+                    "path": "<Keyboard>/t",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "LeftTriiggerComputer",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
